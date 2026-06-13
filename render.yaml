@@ -1,0 +1,10 @@
+# Render service configuration — builds client and starts server
+services:
+  - type: web
+    name: moodify
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm install && npm --prefix client install && npm --prefix client run build
+    startCommand: npm start
+    autoDeploy: true
