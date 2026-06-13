@@ -31,9 +31,12 @@ const RESPONSE_SCHEMA = {
   required: ["playlistName", "description", "tracks"],
 };
 
+// Tried in order when a model is overloaded (503) or rate-limited (429).
+const FALLBACK_MODELS = ["gemini-2.5-flash-lite", "gemini-2.0-flash"];
+
 export async function generatePlaylistIdea(feeling) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const primary = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const models = [primary, ...FALLBACK_MODELS.filter((m) => m !== primary)];
 
   const prompt = [
     "You are a brilliant music curator. A listener just told you how they are feeling:",
@@ -47,11 +50,26 @@ export async function generatePlaylistIdea(feeling) {
     "- Use the artist's primary name as credited on Spotify.",
   ].join("\n");
 
+  let lastErr;
+  for (const model of models) {
+    try {
+      return await callModel(model, prompt);
+    } catch (err) {
+      lastErr = err;
+      // Only fall through on overload/rate-limit; other errors won't fix themselves.
+      if (err.status !== 503 && err.status !== 429) throw err;
+      console.warn(`Gemini ${model} unavailable (${err.status}), trying next model…`);
+    }
+  }
+  throw lastErr;
+}
+
+async function callModel(model, prompt) {
   const res = await fetch(GEMINI_URL(model), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
+      "x-goog-api-key": process.env.GEMINI_API_KEY,
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
@@ -65,7 +83,9 @@ export async function generatePlaylistIdea(feeling) {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${body.slice(0, 500)}`);
+    const err = new Error(`Gemini API error ${res.status}: ${body.slice(0, 500)}`);
+    err.status = res.status;
+    throw err;
   }
 
   const data = await res.json();

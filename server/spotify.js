@@ -107,15 +107,18 @@ async function searchOnce(accessToken, q) {
   };
 }
 
-export async function createPlaylist(accessToken, userId, { name, description }) {
-  return api(accessToken, `/users/${encodeURIComponent(userId)}/playlists`, {
+// Spotify's Feb 2026 API migration: dev-mode apps must use POST /me/playlists
+// and POST /playlists/{id}/items — the old /users/{id}/playlists and
+// /playlists/{id}/tracks endpoints return bare 403s.
+export async function createPlaylist(accessToken, { name, description }) {
+  return api(accessToken, `/me/playlists`, {
     method: "POST",
     body: JSON.stringify({ name, description, public: false }),
   });
 }
 
 export async function addTracks(accessToken, playlistId, uris) {
-  return api(accessToken, `/playlists/${playlistId}/tracks`, {
+  return api(accessToken, `/playlists/${playlistId}/items`, {
     method: "POST",
     body: JSON.stringify({ uris }),
   });

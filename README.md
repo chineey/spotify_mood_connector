@@ -79,3 +79,7 @@ After UI changes, `npm run build` refreshes what `npm start` serves.
 - Playlists are created **private** by default (`server/index.js`, `createPlaylist`).
 - Voice input (mic button) uses the browser's Web Speech API — works on Chrome for
   Android and iOS Safari; the button hides itself where unsupported.
+- Uses the post-Feb-2026 Web API endpoints (`POST /me/playlists`,
+  `POST /playlists/{id}/items`). Dev-mode apps get bare 403s from the older
+  `/users/{id}/playlists` and `/playlists/{id}/tracks` — see Spotify's
+  [migration guide](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide).

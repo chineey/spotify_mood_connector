@@ -41,7 +41,7 @@ async function freshAccessToken(session) {
 
 // ---------- Auth ----------
 
-app.get("/auth/login", (req, res) => {
+app.get("/auth/login", (_req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
   res.cookie("oauth_state", state, { httpOnly: true, sameSite: "lax", maxAge: 600_000 });
   res.redirect(spotify.authorizeUrl(state));
@@ -58,12 +58,14 @@ app.get("/auth/callback", async (req, res) => {
   try {
     const tokens = await spotify.exchangeCode(code);
     const me = await spotify.getMe(tokens.access_token);
+    console.log(`Spotify login: ${me.id} (${me.display_name}) — scopes granted: ${tokens.scope}`);
 
     const sid = crypto.randomBytes(24).toString("hex");
     sessions.set(sid, {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresAt: Date.now() + tokens.expires_in * 1000,
+      scope: tokens.scope,
       user: { id: me.id, name: me.display_name || me.id },
     });
     res.cookie("sid", sid, {
@@ -123,7 +125,7 @@ app.post("/api/playlist", async (req, res) => {
     }
 
     // 3. Create the playlist on the user's account and add the tracks
-    const playlist = await spotify.createPlaylist(token, session.user.id, {
+    const playlist = await spotify.createPlaylist(token, {
       name: idea.playlistName,
       description: `${idea.description} (made by Moodify from: "${feeling}")`.slice(0, 300),
     });
@@ -141,6 +143,17 @@ app.post("/api/playlist", async (req, res) => {
     if (err.status === 401) {
       sessions.delete(req.cookies.sid);
       return res.status(401).json({ error: "Spotify session expired — log in again." });
+    }
+    if (err.status === 403) {
+      return res.status(403).json({
+        error:
+          "Spotify refused (403). If this account isn't the app owner, add it under User Management in the Spotify developer dashboard.",
+      });
+    }
+    if (err.status === 503 || err.status === 429) {
+      return res.status(503).json({
+        error: "The AI is overloaded right now — wait a minute and try again.",
+      });
     }
     res.status(500).json({ error: "Something went wrong making your playlist. Try again." });
   }
