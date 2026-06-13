@@ -1,7 +1,9 @@
+const BASE = import.meta.env.VITE_API_BASE || "";
+
 async function request(path, options = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(BASE + path, {
     headers: { "Content-Type": "application/json" },
-    credentials: "same-origin",
+    credentials: "include",
     ...options,
   });
   const data = await res.json().catch(() => ({}));

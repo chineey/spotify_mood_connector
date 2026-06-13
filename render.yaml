@@ -1,10 +1,18 @@
-# Render service configuration — builds client and starts server
+# Render manifest: separate API (web service) and client (static site)
+
 services:
   - type: web
-    name: moodify
+    name: moodify-api
     env: node
     plan: free
     branch: main
-    buildCommand: npm install && npm --prefix client install && npm --prefix client run build
+    buildCommand: npm install
     startCommand: npm start
+    autoDeploy: true
+
+static_sites:
+  - name: moodify-client
+    branch: main
+    buildCommand: npm --prefix client install && npm --prefix client run build
+    publishPath: client/dist
     autoDeploy: true
