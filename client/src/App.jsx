@@ -98,7 +98,7 @@ function Login({ error }) {
           <span className="accent">Playlist out.</span>
         </h1>
         <p className="sub">
-          Tell us how you feel — Gemini curates a playlist and drops it straight
+          Tell us how you feel — Moodify curates a playlist and drops it straight
           into your Spotify.
         </p>
         {error && <p className="error">{error}</p>}
