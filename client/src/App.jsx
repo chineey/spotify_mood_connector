@@ -102,7 +102,10 @@ function Login({ error }) {
           into your Spotify.
         </p>
         {error && <p className="error">{error}</p>}
-        <a className="btn btn-spotify" href="/auth/login">
+        <a
+          className="btn btn-spotify"
+          href={(import.meta.env.VITE_API_BASE || "") + "/auth/login"}
+        >
           <SpotifyIcon /> Connect Spotify
         </a>
         <p className="fineprint">

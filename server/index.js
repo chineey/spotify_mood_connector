@@ -43,7 +43,13 @@ async function freshAccessToken(session) {
 
 app.get("/auth/login", (_req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
-  res.cookie("oauth_state", state, { httpOnly: true, sameSite: "lax", maxAge: 600_000 });
+  // Set oauth_state as cross-site to survive the OAuth redirect chain
+  res.cookie("oauth_state", state, {
+    httpOnly: true,
+    sameSite: "none",
+    secure: true,
+    maxAge: 600_000,
+  });
   res.redirect(spotify.authorizeUrl(state));
 });
 
@@ -68,12 +74,15 @@ app.get("/auth/callback", async (req, res) => {
       scope: tokens.scope,
       user: { id: me.id, name: me.display_name || me.id },
     });
+    // Set session cookie for the API domain; allow cross-site requests from the static site
     res.cookie("sid", sid, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "none",
+      secure: true,
       maxAge: 30 * 24 * 3600 * 1000,
     });
-    res.redirect("/");
+    // Redirect back to the client UI (if provided) so users land on the static site
+    res.redirect(process.env.CLIENT_URL || "/");
   } catch (err) {
     console.error("OAuth callback failed:", err);
     res.redirect("/?error=login_failed");
